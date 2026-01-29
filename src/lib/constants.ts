@@ -41,4 +41,6 @@ export const DEFAULT_INPUTS: BridgeDesignInput = {
   highFloodLevel: 100.0,
   riverBedLevel: 95.0,
   foundationLevel: 88.0,
+  catchmentArea: 50,
+  siltFactor: 1.0,
 };

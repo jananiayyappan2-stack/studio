@@ -9,6 +9,8 @@ export interface BridgeDesignInput {
   highFloodLevel: number;
   riverBedLevel: number;
   foundationLevel: number;
+  catchmentArea: number;
+  siltFactor: number;
 }
 
 export interface CalculationStep {

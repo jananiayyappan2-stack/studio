@@ -105,48 +105,100 @@ function calculateLiveLoad(input: BridgeDesignInput): CalculationSection {
 
 function calculateHydraulicDesign(input: BridgeDesignInput): CalculationSection {
   const waterDepth = input.highFloodLevel - input.riverBedLevel;
+  if (waterDepth <= 0) {
+    return {
+      title: 'Hydraulic Design',
+      icon: Droplets,
+      steps: [{ title: 'Error', formula: '-', values: 'HFL must be greater than River Bed Level.', result: 'N/A', unit: '', clause: '', aiContext: 'High Flood Level must be above the River Bed Level to calculate hydraulic properties.' }],
+      summary: { title: 'Design Discharge', value: 'N/A', unit: 'm³/s' }
+    };
+  }
+
+  // 1. Discharge (Q) using Dicken's formula: Q = C * A^(3/4)
+  const dickensConstant = 11.5; // For a region with 25-50cm annual rainfall
+  const discharge = dickensConstant * Math.pow(input.catchmentArea, 0.75);
+
+  // 2. Linear Waterway (W) using Lacey's formula: W = 4.75 * sqrt(Q)
+  const waterwayWidth = 4.75 * Math.sqrt(discharge);
+
+  // 3. Velocity (V) = Q / Area = Q / (W * d)
+  const velocity = discharge / (waterwayWidth * waterDepth);
+
+  // 4. Scour Depth (R) using Lacey's formula R = 1.35 * (q^2 / f)^(1/3)
+  const dischargePerMeter = discharge / waterwayWidth;
+  const scourDepthNormal = 1.35 * Math.pow(Math.pow(dischargePerMeter, 2) / input.siltFactor, 1/3);
+  const designScourDepth = scourDepthNormal * 2.0; // At piers/abutments
+
   const foundationDepth = input.riverBedLevel - input.foundationLevel;
-  const minimumFreeboard = 1.2; // Assuming a standard value for this simplified example (in meters)
+  const minimumFreeboard = 1.2;
 
   return {
     title: 'Hydraulic Design',
     icon: Droplets,
     steps: [
       {
-        title: 'Max Water Depth',
-        formula: 'HFL - River Bed Level',
-        values: `${input.highFloodLevel.toFixed(2)}m - ${input.riverBedLevel.toFixed(2)}m`,
-        result: waterDepth.toFixed(2),
+        title: 'Maximum Flood Discharge (Q)',
+        formula: 'Q = C × A^(3/4)',
+        values: `Q = ${dickensConstant} × ${input.catchmentArea}^(3/4)`,
+        result: discharge.toFixed(2),
+        unit: 'm³/s',
+        clause: "Dicken's Formula",
+        aiContext: 'Maximum flood discharge is the highest rate of water flow a river is expected to carry. Dicken\'s formula is a common empirical method to estimate this based on the catchment area.'
+      },
+      {
+        title: 'Linear Waterway Width (W)',
+        formula: 'W = 4.75 × √Q',
+        values: `W = 4.75 × √${discharge.toFixed(2)}`,
+        result: waterwayWidth.toFixed(2),
         unit: 'm',
-        clause: 'Hydraulic Data',
-        aiContext: 'This is the depth of the water in the river during a high flood event. It is crucial for determining the required height of the bridge and the forces on the piers.'
+        clause: "Lacey's Regime Width",
+        aiContext: 'This is the stable width of the river required to pass the design flood without significant erosion. It is a crucial input for determining the overall bridge length and span arrangement.'
+      },
+      {
+        title: 'Maximum Velocity (V)',
+        formula: 'V = Q / (W × d)',
+        values: `V = ${discharge.toFixed(2)} / (${waterwayWidth.toFixed(2)} × ${waterDepth.toFixed(2)})`,
+        result: velocity.toFixed(2),
+        unit: 'm/s',
+        clause: 'Continuity Equation',
+        aiContext: 'The velocity of water during a flood determines the force on bridge piers and the potential for scour. It is calculated from the discharge and the flow\'s cross-sectional area.'
+      },
+      {
+        title: 'Design Scour Depth',
+        formula: 'R_design = 2.0 × 1.35 × (q² / f)^(1/3)',
+        values: `R_design = 2.0 × 1.35 × ((${dischargePerMeter.toFixed(2)})² / ${input.siltFactor})^(1/3)`,
+        result: designScourDepth.toFixed(2),
+        unit: 'm',
+        clause: 'IRC:78 - Cl. 703',
+        aiContext: 'Scour is the erosion of the riverbed by flowing water, which is amplified around piers. The foundation must be placed safely below this design scour depth to prevent bridge failure.'
       },
       {
         title: 'Minimum Vertical Clearance (Freeboard)',
         formula: 'As per IRC:78-2014',
-        values: 'Typically depends on discharge, but a common minimum is provided.',
+        values: 'A minimum clearance above HFL is required.',
         result: minimumFreeboard.toFixed(2),
         unit: 'm',
         clause: 'IRC:78 - Cl. 705.3',
-        aiContext: 'Vertical clearance, or freeboard, is the clear space between the High Flood Level and the underside of the bridge deck. It is essential to allow for floating debris and wave action, preventing the bridge from being overtopped.'
+        aiContext: 'Freeboard is the clear space between the High Flood Level and the bridge\'s underside. It prevents floating debris from hitting the bridge and accommodates wave action.'
       },
       {
-        title: 'Foundation Depth Below Bed',
+        title: 'Provided Foundation Depth',
         formula: 'River Bed Level - Foundation Level',
         values: `${input.riverBedLevel.toFixed(2)}m - ${input.foundationLevel.toFixed(2)}m`,
         result: foundationDepth.toFixed(2),
         unit: 'm',
-        clause: 'IRC:78 - Scour Depth',
-        aiContext: 'The foundation must be placed at a safe depth below the riverbed, considering the maximum anticipated scour (erosion) depth to ensure the stability of the bridge structure.'
+        clause: 'Design Data',
+        aiContext: 'This is the actual depth of the foundation as specified in the inputs. It should be compared against the calculated Design Scour Depth to ensure safety.'
       },
     ],
     summary: {
-      title: 'Water Depth',
-      value: waterDepth.toFixed(2),
-      unit: 'm',
+      title: 'Design Discharge',
+      value: discharge.toFixed(2),
+      unit: 'm³/s',
     },
   };
 }
+
 
 function calculateImpactFactor(input: BridgeDesignInput): CalculationSection {
   let impactFactor;

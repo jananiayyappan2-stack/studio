@@ -39,6 +39,8 @@ const formSchema = z.object({
   highFloodLevel: z.coerce.number(),
   riverBedLevel: z.coerce.number(),
   foundationLevel: z.coerce.number(),
+  catchmentArea: z.coerce.number().min(1, 'Min area is 1 sq.km'),
+  siltFactor: z.coerce.number().min(0.5, 'Min silt factor is 0.5').max(2.5, 'Max silt factor is 2.5'),
 });
 
 interface InputFormProps {
@@ -166,6 +168,31 @@ export default function InputForm({ onCalculate, isLoading }: InputFormProps) {
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Found. Level (m)</FormLabel>
+                    <FormControl><Input type="number" step="0.1" {...field} /></FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+               <FormField
+                control={form.control}
+                name="catchmentArea"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Catchment Area (km²)</FormLabel>
+                    <FormControl><Input type="number" step="1" {...field} /></FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+               <FormField
+                control={form.control}
+                name="siltFactor"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Silt Factor (f)</FormLabel>
                     <FormControl><Input type="number" step="0.1" {...field} /></FormControl>
                     <FormMessage />
                   </FormItem>
