@@ -1,4 +1,4 @@
-import { Scale, Truck, Waves, Sigma, Scissors, Droplets } from 'lucide-react';
+import { Scale, Truck, Waves, Sigma, Scissors, Droplets, PanelTop, Pyramid, ChevronsRight, RectangleHorizontal } from 'lucide-react';
 import type { BridgeDesignInput, CalculationOutput, CalculationSection, CalculationSummary } from './types';
 import { CONCRETE_DENSITY, WEARING_COAT_DENSITY } from './constants';
 
@@ -292,6 +292,181 @@ function calculateDesignForces(dlUdl: number, llUdl: number, impact: number, spa
   return { bmSection, sfSection };
 }
 
+function calculateDeckDesign(input: BridgeDesignInput): CalculationSection {
+  const slabThickness = input.spanLength / 25;
+
+  return {
+    title: 'Superstructure: Deck Slab',
+    icon: PanelTop,
+    steps: [
+      {
+        title: 'Preliminary Slab Thickness',
+        formula: 'L / 25',
+        values: `${input.spanLength}m / 25`,
+        result: slabThickness.toFixed(3),
+        unit: 'm',
+        clause: 'General Guideline',
+        aiContext: `The initial thickness of a slab bridge deck is estimated based on its span. A common rule of thumb for a simply supported slab is to use a span-to-depth ratio of around 25. This provides a starting point for detailed design and analysis.`
+      }
+    ],
+    summary: {
+      title: 'Slab Thickness',
+      value: slabThickness.toFixed(3),
+      unit: 'm',
+    }
+  };
+}
+
+function calculatePierDesign(input: BridgeDesignInput): CalculationSection {
+  const minimumFreeboard = 1.2; // from hydraulic design
+  const pierHeight = (input.highFloodLevel + minimumFreeboard) - input.foundationLevel;
+  const pierWidth = input.carriagewayWidth > 2 ? input.carriagewayWidth - 1.0 : input.carriagewayWidth; // Ensure it's not negative
+  const pierThickness = input.spanLength / 12;
+
+  return {
+    title: 'Substructure: Pier',
+    icon: Pyramid,
+    steps: [
+      {
+        title: 'Pier Height',
+        formula: '(HFL + Freeboard) - Foundation Level',
+        values: `(${input.highFloodLevel}m + ${minimumFreeboard}m) - ${input.foundationLevel}m`,
+        result: pierHeight.toFixed(2),
+        unit: 'm',
+        clause: 'Geometric Calculation',
+        aiContext: 'The pier height is determined by the required vertical clearance above the high flood level and the depth of the foundation. It extends from the foundation top to the underside of the bridge superstructure.'
+      },
+      {
+        title: 'Pier Width (Perpendicular to traffic)',
+        formula: 'Carriageway Width - 1.0m',
+        values: `${input.carriagewayWidth}m - 1.0m`,
+        result: pierWidth.toFixed(2),
+        unit: 'm',
+        clause: 'General Guideline',
+        aiContext: 'The width of the pier is typically set to be slightly less than the width of the bridge deck it supports, providing adequate support while maintaining a streamlined profile.'
+      },
+      {
+        title: 'Pier Thickness (Parallel to traffic)',
+        formula: 'Span / 12',
+        values: `${input.spanLength}m / 12`,
+        result: pierThickness.toFixed(2),
+        unit: 'm',
+        clause: 'General Guideline',
+        aiContext: 'The thickness of the pier is a preliminary dimension based on the span length. A longer span will require a thicker pier to handle the increased longitudinal forces from braking and temperature changes.'
+      }
+    ],
+    summary: {
+      title: 'Pier Dimensions (H×W×T)',
+      value: `${pierHeight.toFixed(2)}×${pierWidth.toFixed(2)}×${pierThickness.toFixed(2)}`,
+      unit: 'm',
+    }
+  };
+}
+
+function calculateAbutmentDesign(input: BridgeDesignInput): CalculationSection {
+  const slabThickness = input.spanLength / 25;
+  const minimumFreeboard = 1.2;
+  const abutmentHeight = (input.highFloodLevel + minimumFreeboard + slabThickness) - input.riverBedLevel;
+  const topWidth = 0.6;
+  const bottomWidth = 0.45 * abutmentHeight;
+
+  return {
+    title: 'Substructure: Abutment',
+    icon: ChevronsRight,
+    steps: [
+      {
+        title: 'Abutment Height',
+        formula: '(HFL + Freeboard + Deck) - Bed Level',
+        values: `(${input.highFloodLevel}m + ${minimumFreeboard}m + ${slabThickness.toFixed(2)}m) - ${input.riverBedLevel}m`,
+        result: abutmentHeight.toFixed(2),
+        unit: 'm',
+        clause: 'Geometric Calculation',
+        aiContext: 'The abutment is the structure at the end of the bridge span, which supports the superstructure and retains the earth from the approach road. Its height is determined by the road level and the river bed level.'
+      },
+      {
+        title: 'Top Width',
+        formula: 'General Guideline',
+        values: 'Assumed for bearing and construction',
+        result: topWidth.toFixed(2),
+        unit: 'm',
+        clause: 'IRC:78 - Cl. 708.2.1',
+        aiContext: 'The top width of an abutment needs to be sufficient to accommodate the bridge bearings and allow for construction tolerances. A typical value is around 0.5m to 1.0m.'
+      },
+      {
+        title: 'Bottom Width',
+        formula: '0.45 × Height',
+        values: `0.45 × ${abutmentHeight.toFixed(2)}m`,
+        result: bottomWidth.toFixed(2),
+        unit: 'm',
+        clause: 'Stability Guideline',
+        aiContext: 'The bottom width of a gravity abutment is critical for its stability against overturning and sliding forces from the retained earth and bridge loads. It is often estimated as a proportion of its height.'
+      },
+    ],
+    summary: {
+      title: 'Abutment Base Width',
+      value: bottomWidth.toFixed(2),
+      unit: 'm',
+    }
+  };
+}
+
+
+function calculateFootingDesign(input: BridgeDesignInput, totalDesignUdl: number): CalculationSection {
+  const SBC = 250; // Assumed Safe Bearing Capacity in kN/m^2
+  const totalLoadOnPier = totalDesignUdl * input.spanLength;
+  const footingArea = totalLoadOnPier / SBC;
+  const footingSide = Math.sqrt(footingArea);
+  const footingDepth = 1.2; // Assumed depth
+
+  return {
+    title: 'Foundation: Open Footing (Pier)',
+    icon: RectangleHorizontal,
+    steps: [
+      {
+        title: 'Total Load on Foundation',
+        formula: 'Total Design UDL × Span',
+        values: `${totalDesignUdl.toFixed(2)} kN/m × ${input.spanLength}m`,
+        result: totalLoadOnPier.toFixed(2),
+        unit: 'kN',
+        clause: 'Load Transfer',
+        aiContext: 'The total vertical load on the foundation is the sum of dead load, live load, and impact from the superstructure. This calculation assumes one pier supports one full span for simplicity.'
+      },
+      {
+        title: 'Required Footing Area',
+        formula: 'Total Load / SBC',
+        values: `${totalLoadOnPier.toFixed(2)} kN / ${SBC} kN/m² (Assumed SBC)`,
+        result: footingArea.toFixed(2),
+        unit: 'm²',
+        clause: 'Geotechnical Design',
+        aiContext: 'The area of the footing is determined by dividing the total load by the Safe Bearing Capacity (SBC) of the soil. The SBC is a critical geotechnical parameter that must be determined from soil investigation. We assume a value of 250 kN/m².'
+      },
+      {
+        title: 'Footing Dimensions (Square)',
+        formula: '√Area',
+        values: `√${footingArea.toFixed(2)}`,
+        result: footingSide.toFixed(2),
+        unit: 'm x m',
+        clause: 'Dimensioning',
+        aiContext: 'For a square footing, the side length is simply the square root of the required area. This provides a preliminary size for the foundation.'
+      },
+      {
+        title: 'Assumed Footing Depth',
+        formula: 'Practical Assumption',
+        values: 'A minimum depth is required for rigidity.',
+        result: footingDepth.toFixed(2),
+        unit: 'm',
+        clause: 'General Guideline',
+        aiContext: 'The depth of the footing provides rigidity to distribute the loads evenly to the soil and resist shear and bending forces within the footing itself. A typical preliminary value is around 1.0m to 1.5m.'
+      },
+    ],
+    summary: {
+      title: 'Footing Size',
+      value: `${footingSide.toFixed(2)}×${footingSide.toFixed(2)}×${footingDepth.toFixed(2)}`,
+      unit: 'm',
+    }
+  };
+}
+
 export function performCalculations(input: BridgeDesignInput): CalculationOutput {
   const dlSection = calculateDeadLoad(input);
   const llSection = calculateLiveLoad(input);
@@ -304,7 +479,15 @@ export function performCalculations(input: BridgeDesignInput): CalculationOutput
 
   const { bmSection, sfSection } = calculateDesignForces(dlUdl, llUdl, impact, input.spanLength);
   
-  const sections = [dlSection, llSection, hydraulicSection, impactSection, bmSection, sfSection];
+  const liveLoadWithImpact = llUdl * (1 + impact);
+  const totalDesignUdl = dlUdl + liveLoadWithImpact;
+
+  const deckSection = calculateDeckDesign(input);
+  const pierSection = calculatePierDesign(input);
+  const abutmentSection = calculateAbutmentDesign(input);
+  const footingSection = calculateFootingDesign(input, totalDesignUdl);
+  
+  const sections = [dlSection, llSection, hydraulicSection, impactSection, bmSection, sfSection, deckSection, pierSection, abutmentSection, footingSection];
 
   const summary: CalculationSummary = {};
   sections.forEach(sec => {
