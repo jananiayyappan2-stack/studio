@@ -6,6 +6,9 @@ export interface BridgeDesignInput {
   concreteGrade: string;
   steelGrade: string;
   loadClass: 'class_a' | 'class_aa';
+  highFloodLevel: number;
+  riverBedLevel: number;
+  foundationLevel: number;
 }
 
 export interface CalculationStep {

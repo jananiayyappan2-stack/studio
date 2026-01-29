@@ -1,4 +1,4 @@
-import { Scale, Truck, Waves, Sigma, Scissors } from 'lucide-react';
+import { Scale, Truck, Waves, Sigma, Scissors, Droplets } from 'lucide-react';
 import type { BridgeDesignInput, CalculationOutput, CalculationSection, CalculationSummary } from './types';
 import { CONCRETE_DENSITY, WEARING_COAT_DENSITY } from './constants';
 
@@ -103,6 +103,51 @@ function calculateLiveLoad(input: BridgeDesignInput): CalculationSection {
   };
 }
 
+function calculateHydraulicDesign(input: BridgeDesignInput): CalculationSection {
+  const waterDepth = input.highFloodLevel - input.riverBedLevel;
+  const foundationDepth = input.riverBedLevel - input.foundationLevel;
+  const minimumFreeboard = 1.2; // Assuming a standard value for this simplified example (in meters)
+
+  return {
+    title: 'Hydraulic Design',
+    icon: Droplets,
+    steps: [
+      {
+        title: 'Max Water Depth',
+        formula: 'HFL - River Bed Level',
+        values: `${input.highFloodLevel.toFixed(2)}m - ${input.riverBedLevel.toFixed(2)}m`,
+        result: waterDepth.toFixed(2),
+        unit: 'm',
+        clause: 'Hydraulic Data',
+        aiContext: 'This is the depth of the water in the river during a high flood event. It is crucial for determining the required height of the bridge and the forces on the piers.'
+      },
+      {
+        title: 'Minimum Vertical Clearance (Freeboard)',
+        formula: 'As per IRC:78-2014',
+        values: 'Typically depends on discharge, but a common minimum is provided.',
+        result: minimumFreeboard.toFixed(2),
+        unit: 'm',
+        clause: 'IRC:78 - Cl. 705.3',
+        aiContext: 'Vertical clearance, or freeboard, is the clear space between the High Flood Level and the underside of the bridge deck. It is essential to allow for floating debris and wave action, preventing the bridge from being overtopped.'
+      },
+      {
+        title: 'Foundation Depth Below Bed',
+        formula: 'River Bed Level - Foundation Level',
+        values: `${input.riverBedLevel.toFixed(2)}m - ${input.foundationLevel.toFixed(2)}m`,
+        result: foundationDepth.toFixed(2),
+        unit: 'm',
+        clause: 'IRC:78 - Scour Depth',
+        aiContext: 'The foundation must be placed at a safe depth below the riverbed, considering the maximum anticipated scour (erosion) depth to ensure the stability of the bridge structure.'
+      },
+    ],
+    summary: {
+      title: 'Water Depth',
+      value: waterDepth.toFixed(2),
+      unit: 'm',
+    },
+  };
+}
+
 function calculateImpactFactor(input: BridgeDesignInput): CalculationSection {
   let impactFactor;
   // Formula for RCC Bridges as per IRC:6 Cl. 209.2
@@ -198,6 +243,7 @@ function calculateDesignForces(dlUdl: number, llUdl: number, impact: number, spa
 export function performCalculations(input: BridgeDesignInput): CalculationOutput {
   const dlSection = calculateDeadLoad(input);
   const llSection = calculateLiveLoad(input);
+  const hydraulicSection = calculateHydraulicDesign(input);
   const impactSection = calculateImpactFactor(input);
 
   const dlUdl = parseFloat(dlSection.summary!.value);
@@ -206,7 +252,7 @@ export function performCalculations(input: BridgeDesignInput): CalculationOutput
 
   const { bmSection, sfSection } = calculateDesignForces(dlUdl, llUdl, impact, input.spanLength);
   
-  const sections = [dlSection, llSection, impactSection, bmSection, sfSection];
+  const sections = [dlSection, llSection, hydraulicSection, impactSection, bmSection, sfSection];
 
   const summary: CalculationSummary = {};
   sections.forEach(sec => {

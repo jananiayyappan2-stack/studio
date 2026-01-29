@@ -38,4 +38,7 @@ export const DEFAULT_INPUTS: BridgeDesignInput = {
   concreteGrade: 'M35',
   steelGrade: 'Fe500',
   loadClass: 'class_aa',
+  highFloodLevel: 100.0,
+  riverBedLevel: 95.0,
+  foundationLevel: 88.0,
 };

@@ -36,6 +36,9 @@ const formSchema = z.object({
   concreteGrade: z.string(),
   steelGrade: z.string(),
   loadClass: z.enum(['class_a', 'class_aa']),
+  highFloodLevel: z.coerce.number(),
+  riverBedLevel: z.coerce.number(),
+  foundationLevel: z.coerce.number(),
 });
 
 interface InputFormProps {
@@ -131,6 +134,45 @@ export default function InputForm({ onCalculate, isLoading }: InputFormProps) {
                 )}
               />
 
+            <Separator />
+            <h3 className="text-lg font-semibold font-headline -mb-2">Hydraulic Particulars</h3>
+
+            <div className="grid grid-cols-3 gap-4">
+              <FormField
+                control={form.control}
+                name="highFloodLevel"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>HFL (m)</FormLabel>
+                    <FormControl><Input type="number" step="0.1" {...field} /></FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="riverBedLevel"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Bed Level (m)</FormLabel>
+                    <FormControl><Input type="number" step="0.1" {...field} /></FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="foundationLevel"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Found. Level (m)</FormLabel>
+                    <FormControl><Input type="number" step="0.1" {...field} /></FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
+            
             <Separator />
             <h3 className="text-lg font-semibold font-headline -mb-2">Materials & Loading</h3>
 
