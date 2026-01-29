@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import { Toaster } from "@/components/ui/toaster"
 import './globals.css';
+import ChatWidget from '@/components/chat/chat-widget';
 
 export const metadata: Metadata = {
   title: 'SetuCalc: Bridge Design Assistant',
@@ -21,6 +22,7 @@ export default function RootLayout({
       </head>
       <body className="font-body antialiased">
         {children}
+        <ChatWidget />
         <Toaster />
       </body>
     </html>
